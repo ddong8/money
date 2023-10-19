@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -33,10 +34,49 @@ type ImageResizePayload struct {
 // A task consists of a type and a payload.
 //----------------------------------------------
 
+func getStock() string {
+	stock_code := "AG2312"
+	url := "http://hq.sinajs.cn/list=" + stock_code
+	method := "GET"
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+
+	if err != nil {
+		fmt.Println(err)
+		return err.Error()
+	}
+	req.Header.Add("Referer", "https://finance.sina.com.cn")
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return err.Error()
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return err.Error()
+	}
+
+	bodyText := string(body)
+	start := strings.Index(bodyText, "\"") + 1
+	end := strings.LastIndex(bodyText, "\"") - 1
+	dataStr := ""
+	if end > start {
+		dataStr = bodyText[start:end]
+	}
+	price := strings.Split(dataStr, ",")[7]
+	return price
+}
+
 func sendPush() {
 	// push (POST http://127.0.0.1:8080/push)
 
-	json := []byte(`{"body": "Test Bark Server","device_key": "StHezvE2w77GLuscNKRw75","title": "bleem", "badge": 1, "icon": "https://day.app/assets/images/avatar.jpg", "group": "test", "url": "https://mritd.com","category": "myNotificationCategory","sound": "minuet.caf"}`)
+	BodyStr := getStock()
+
+	json := []byte(`{"body": "当前白银价格 ` + BodyStr + `","device_key": "StHezvE2w77GLuscNKRw75","title": "bleem", "badge": 1, "icon": "https://day.app/assets/images/avatar.jpg", "group": "test", "url": "https://mritd.com","category": "myNotificationCategory","sound": "minuet.caf"}`)
 	body := bytes.NewBuffer(json)
 
 	// Create client
@@ -59,7 +99,7 @@ func sendPush() {
 	}
 
 	// Read Response Body
-	respBody, _ := ioutil.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(resp.Body)
 
 	// Display Results
 	fmt.Println("response Status : ", resp.Status)
