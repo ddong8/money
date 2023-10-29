@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  monitor:
+    build: .
+    restart: always
+    volumes:
+      - ./:/usr/src/money
+      - /etc/localtime:/etc/localtime
+    ports:
+      - "8080:8080"
+    links:
+      - redis
+    depends_on:
+      - redis
+    container_name: monitor
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always     # "unless-stopped" or "always"
+    ## UNCOMMENT THESE LINES IF WE USE CUSTOM REDIS CONFIG ##
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - /etc/localtime:/etc/localtime    
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    container_name: "redis"
+  workers:
+    build: .
+    command: "/usr/local/bin/workers"
+    user: nobody
+    restart: always
+    volumes:
+      - ./:/usr/src/money
+      - /etc/localtime:/etc/localtime
+    links:
+      - redis
+    depends_on:
+      - redis
+    container_name: workers

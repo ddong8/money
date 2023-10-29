@@ -10,10 +10,10 @@ func main() {
 	r := gin.Default()
 
 	mon := asynqmon.New(asynqmon.Options{
-		RootPath:     "/monitor", // RootPath specifies the root for asynqmon app
-		RedisConnOpt: asynq.RedisClientOpt{Addr: ":6379"},
+		RootPath:     "/monitoring/tasks", // RootPath specifies the root for asynqmon app
+		RedisConnOpt: asynq.RedisClientOpt{Addr: "redis:6379"},
 	})
-	r.Any("/monitor/*a", gin.WrapH(mon))
+	r.Any("/monitoring/tasks/*a", gin.WrapH(mon))
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

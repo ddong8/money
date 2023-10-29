@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,12 +72,9 @@ func getStock() string {
 	return price
 }
 
-func sendPush() {
-	// push (POST http://127.0.0.1:8080/push)
+func sendPush(bodyStr string) {
 
-	BodyStr := getStock()
-
-	json := []byte(`{"body": "当前白银价格 ` + BodyStr + `","device_key": "StHezvE2w77GLuscNKRw75","title": "bleem", "badge": 1, "icon": "https://day.app/assets/images/avatar.jpg", "group": "test", "url": "https://mritd.com","category": "myNotificationCategory","sound": "minuet.caf"}`)
+	json := []byte(`{"body": "当前白银价格 ` + bodyStr + `","device_key": "StHezvE2w77GLuscNKRw75","title": "bleem", "badge": 1, "icon": "https://day.app/assets/images/avatar.jpg", "group": "test", "url": "https://mritd.com","category": "myNotificationCategory","sound": "minuet.caf"}`)
 	body := bytes.NewBuffer(json)
 
 	// Create client
@@ -137,11 +135,18 @@ func HandleEmailDeliveryTask(ctx context.Context, t *asynq.Task) error {
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
-	time.Sleep(3000)
-	sendPush()
-	log.Printf("Sending Email to User: user_id=%d, template_id=%s", p.UserID, p.TemplateID)
-	// Email delivery code ...
-	return nil
+	for {
+		BodyStr := getStock()
+		value, err := strconv.ParseFloat(BodyStr, 64)
+		if err != nil {
+			fmt.Println(err)
+			return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
+		}
+		if value >= 5890 {
+			sendPush(BodyStr)
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
 
 // ImageProcessor implements asynq.Handler interface.
